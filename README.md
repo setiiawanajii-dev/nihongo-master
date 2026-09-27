@@ -477,3 +477,13 @@ Buka menu Saran & Bug atau tautan pada Pengaturan. Isi jenis masukan, judul, bag
 Penerima default: aji.stwn71@gmail.com. Dapat diganti melalui VITE_FEEDBACK_EMAIL saat build (lihat .env.example). Alamat ini publik. Tidak ada layanan pengiriman email/server inbox: pengguna harus menekan Kirim di aplikasi email mereka. Aplikasi tidak mengklaim email telah terkirim. Salin dan unduh laporan tersedia jika aplikasi email tidak dikonfigurasi.
 
 Draf disimpan lokal di browser. Hanya teks isian yang dilampirkan; PDF dan database belajar tidak ikut dikirim. Tidak ada email uji yang dikirim. Tes browser fitur mencakup validasi, draf setelah refresh, penerima/body mailto, unduhan, dan lebar layar mobile.
+
+
+## Hapus semua data belajar
+
+Pengaturan → Hapus semua data → ketik HAPUS SEMUA → Ya, hapus semua data.
+Mengosongkan vocabulary, grammar, kategori, contoh, PDF beserta berkas dan halaman, hasil/draf ekstraksi, question bank, progres, catatan, favorit/bookmark, jadwal review, quiz aktif/riwayat, review aktif, serta sesi/waktu/streak. Semua tabel data pengguna dikosongkan dalam satu transaksi IndexedDB; marker migrasi tetap disimpan agar materi demo tidak kembali.
+
+Berbeda dari Reset progres belajar yang mempertahankan konten. Penghapusan berlaku pada browser/origin saat ini dan tidak menghapus PDF asli pada perangkat, tema, maupun draf saran. Tab lain menerima notifikasi reset untuk reload. Export JSON/CSV bukan backup progres atau berkas PDF. Penghapusan tidak dapat dibatalkan.
+
+Validasi: build produksi berhasil; 3 tes browser reset/hapus data lulus. Mencakup penolakan tanpa konfirmasi, pembatalan, seluruh tabel kosong setelah reload, preferensi lokal tetap ada, rollback transaksi saat gagal, serta regresi reset progres. Database pengguna asli tidak dihapus.
