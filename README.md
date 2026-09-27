@@ -487,3 +487,5 @@ Mengosongkan vocabulary, grammar, kategori, contoh, PDF beserta berkas dan halam
 Berbeda dari Reset progres belajar yang mempertahankan konten. Penghapusan berlaku pada browser/origin saat ini dan tidak menghapus PDF asli pada perangkat, tema, maupun draf saran. Tab lain menerima notifikasi reset untuk reload. Export JSON/CSV bukan backup progres atau berkas PDF. Penghapusan tidak dapat dibatalkan.
 
 Validasi: build produksi berhasil; 3 tes browser reset/hapus data lulus. Mencakup penolakan tanpa konfirmasi, pembatalan, seluruh tabel kosong setelah reload, preferensi lokal tetap ada, rollback transaksi saat gagal, serta regresi reset progres. Database pengguna asli tidak dihapus.
+
+Pembaruan: reset data dan pop-up konfirmasi berhasil.
