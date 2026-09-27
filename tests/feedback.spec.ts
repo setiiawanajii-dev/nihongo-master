@@ -1,0 +1,21 @@
+import { test, expect } from '@playwright/test';
+test('feedback validates, keeps draft after refresh, and downloads only supplied report', async ({page}) => {
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/feedback');
+ await page.getByLabel('Judul',{exact:true}).fill('PDF gagal dibuka');
+ await page.getByLabel('Apa yang terjadi?').fill('Halaman reader tidak menampilkan PDF.');
+ await page.getByLabel('Langkah untuk mengulang').fill('Buka Materi PDF, lalu pilih buku.');
+ await page.reload();
+ await expect(page.getByLabel('Judul',{exact:true})).toHaveValue('PDF gagal dibuka');
+ await page.getByRole('button',{name:'Kirim lewat email'}).click();
+ await expect(page.getByRole('heading',{name:'Salinan laporan'})).toBeVisible();
+ const email=page.getByRole('link',{name:'Buka aplikasi email'});
+ const href=await email.getAttribute('href');expect(href).toContain('mailto:aji.stwn71@gmail.com?');expect(decodeURIComponent(href!)).toContain('PDF gagal dibuka');
+ const pending=page.waitForEvent('download');await page.getByRole('button',{name:'Unduh laporan'}).click();
+ expect((await pending).suggestedFilename()).toBe('nihongo-master-feedback.txt');
+ await expect(page.getByRole('status')).toContainText('belum terkirim');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.getByLabel('Judul',{exact:true}).fill('   ');
+ await page.getByRole('button',{name:'Kirim lewat email'}).click();
+ await expect(page.getByRole('alert')).toContainText('minimal 3 karakter');
+});
