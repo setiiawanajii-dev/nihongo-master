@@ -1,0 +1,10 @@
+.transfer-panel { padding:24px; margin-bottom:24px; display:grid; gap:18px; min-width:0; }
+.transfer-panel p { line-height:1.8; }
+.transfer-panel select,.transfer-panel textarea,.transfer-panel input { max-width:100%; min-width:0; }
+.transfer-panel pre { white-space:pre-wrap; overflow-wrap:anywhere; background:var(--surface-soft); border-radius:8px; padding:16px; max-height:360px; overflow:auto; font-size:12px; }
+.transfer-panel summary { cursor:pointer; color:var(--green); padding:10px 0; }
+.transfer-preview { padding-left:24px; display:grid; gap:20px; max-height:640px; overflow:auto; }
+.transfer-preview li { padding:12px; border-bottom:1px solid var(--border); overflow-wrap:anywhere; }
+.transfer-preview select { width:100%; margin:8px 0; }
+@media(max-width:600px){.transfer-panel {padding:18px;}.transfer-preview {padding-left:18px;}}
+.transfer-panel select { border:1px solid var(--border); border-radius:6px; background:var(--page); color:var(--ink); padding:11px; font-size:14px; }

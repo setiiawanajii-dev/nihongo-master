@@ -1,0 +1,39 @@
+/* Shared finishing touches: readable, quiet, and keyboard/touch friendly. */
+:root { --muted: #606e64; }
+:root.dark { --muted: #a0b1a4; }
+textarea { font: inherit; outline-offset: 4px; }
+:focus-visible { outline: 2px solid var(--green); }
+#main-content:focus { outline: none; }
+.button, .button-icon, .avatar { min-height: 44px; }
+.button-icon, .avatar { min-width: 44px; }
+.button:disabled:hover { transform: none; }
+.button, .theme-option, .quiz-option { transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.page-heading > div, .content-card, .section-heading > div { min-width: 0; }
+.page-heading h1, .favorite-title, .form-error, .detail-paragraph { overflow-wrap: anywhere; }
+.detail-paragraph, .page-description { line-height: 1.75; }
+.small-note { font-size: 12px; line-height: 1.65; }
+summary { cursor: pointer; padding-block: 12px; }
+.route-error { max-width: 620px; margin: 12vh auto; padding: 28px; }
+.route-error p { margin-block: 16px; line-height: 1.75; }
+.route-error .entry-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  input:not([type=radio]):not([type=checkbox]), select, textarea { font-size: 16px; }
+  .header-left, .header-actions { gap: 10px; }
+  .entry-actions { gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .button:hover { transform: none; }
+}
+.nav-item { font-size: 13px; }
+.stat-detail { font-size: 11px; line-height: 1.6; }
+.filter-pills button { min-height: 44px; }
+.route-error .card { padding: 24px; }
+.dashboard-columns { grid-template-columns: 1fr; }
+.dashboard-right { display: block; }
+.dashboard-right .journey-card > .study-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) {
+  .dashboard-right .journey-card > .study-grid { grid-template-columns: 1fr; }
+}
+/* Keep the hit area stable at viewport edges and while forms scroll. */
+.button:hover { transform: none; }
