@@ -1,7 +1,0 @@
-import type { LearningProgress } from '../../domain/models';
-import { isDue, reviewDate } from '../../domain/learning/vocabulary';
-import { Badge, ProgressBar } from '../../components/ui';
-
-export function GrammarProgress({ progress, detailed = false }: { progress?: LearningProgress; detailed?: boolean }) {
-  return <div className="vocabulary-progress"><div className="section-heading"><Badge tone={progress?.status === 'WEAK' ? 'orange' : 'green'}>{progress?.status ?? 'NEW'}</Badge><span>Mastery: <strong>{progress?.masteryScore == null ? 'Belum diuji' : `${progress.masteryScore}%`}</strong></span></div><ProgressBar value={progress?.masteryScore ?? 0} label="Mastery grammar" /><p className="small-note">{isDue(progress) ? 'Review jatuh tempo' : 'Review berikutnya'} · {reviewDate(progress?.nextReview)}</p>{detailed && <><div className="evidence-grid">{(['understanding', 'usage', 'sentence'] as const).map((key, i) => <div key={key}><span>{['Pemahaman', 'Penggunaan', 'Penyusunan kalimat'][i]}</span><strong>{progress?.dimensions[key]?.score == null ? 'Belum diuji' : `${progress.dimensions[key]!.score}%`}</strong></div>)}</div><p className="detail-paragraph">{progress?.reviewCount ?? 0} review · {progress?.correctCount ?? 0} kali tahu · {progress?.wrongCount ?? 0} kali belum/hampir tahu</p><p className="small-note">Mastery merangkum latihan mandiri dan jawaban quiz. MASTERED membutuhkan rata-rata ≥85%, tiap aspek ≥80%, dan minimal 3 penilaian per aspek. Aspek yang belum dinilai bernilai 0 dalam rata-rata. Membaca tidak menaikkan skor.</p></>}</div>;
-}
