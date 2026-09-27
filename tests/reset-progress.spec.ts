@@ -29,6 +29,9 @@ test('reset requires confirmation; cancel and rejected command leave data intact
 test('confirmed reset clears tracking, preserves content and notes, survives refresh and supports learning again',async({page})=>{
  await prepare(page);const before=await snapshot(page);
  await page.getByRole('button',{name:'Reset progres belajar',exact:true}).click();await page.getByLabel('Ketik RESET untuk melanjutkan').fill('RESET');await page.getByRole('button',{name:'Ya, reset semua progres'}).click();await expect(page.getByRole('status').filter({hasText:'Progres berhasil direset'})).toBeVisible();
+ await expect(page.getByRole('dialog',{name:'Progres berhasil direset',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Mengerti',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
  await page.reload();const after=await snapshot(page);
  for(const table of ['vocabulary','grammar','examples','categories','pages','pdfFiles','favorites','extractionRuns','extractionDrafts','meta'])expect(after[table],table).toEqual(before[table]);
  for(const table of ['schedules','quizResults','quizAttempts','reviewRuns','sessions','reviewEvents','pdfReading'])expect(after[table],table).toEqual([]);
