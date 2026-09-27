@@ -54,6 +54,7 @@ export class Transaction {
   list<K extends StoreName>(store: K): Promise<Tables[K][]> { return result(this.transaction.objectStore(store).getAll()); }
   async put<K extends StoreName>(store: K, entity: Tables[K]) { await result(this.transaction.objectStore(store).put(entity)); }
   async add<K extends StoreName>(store: K, entity: Tables[K]) { await result(this.transaction.objectStore(store).add(entity)); }
+  async clear(store: StoreName) { await result(this.transaction.objectStore(store).clear()); }
   async delete(store: StoreName, id: string) { await result(this.transaction.objectStore(store).delete(id)); }
 }
 // Resolve writes only after oncomplete, never after an individual request succeeds.

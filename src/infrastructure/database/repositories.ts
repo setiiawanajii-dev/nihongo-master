@@ -1,4 +1,4 @@
-import { resetLearningProgress } from './reset';
+import { resetLearningProgress, deleteAllLearningData } from './reset';
 import { transferCommands } from './transfer';
 import { extractionCommands } from './extraction';
 import { pdfCommands, migratePdfReferences } from './pdf';
@@ -108,7 +108,7 @@ async function initialize() {
 }
 export function createIndexedDbDatabase(): LearningDatabase {
   return {
-    initialize, resetLearningProgress, transfer: transferCommands, extraction: extractionCommands, pdf: pdfCommands, review: reviewCommands, reviewRuns: readOnly('reviewRuns'), quiz: quizCommands, quizAttempts: readOnly('quizAttempts'), learning: { recordGrammarReview, queueGrammarReview, recordVocabularyReview, queueVocabularyReview }, reviewEvents: readOnly('reviewEvents'), vocabulary: repository('vocabulary'), grammar: repository('grammar'), categories: repository('categories'),
+    initialize, resetLearningProgress, deleteAllLearningData, transfer: transferCommands, extraction: extractionCommands, pdf: pdfCommands, review: reviewCommands, reviewRuns: readOnly('reviewRuns'), quiz: quizCommands, quizAttempts: readOnly('quizAttempts'), learning: { recordGrammarReview, queueGrammarReview, recordVocabularyReview, queueVocabularyReview }, reviewEvents: readOnly('reviewEvents'), vocabulary: repository('vocabulary'), grammar: repository('grammar'), categories: repository('categories'),
     progress: repository('progress'), favorites: repository('favorites'), examples: repository('examples'),
     materials: readOnly('materials'), pages: readOnly('pages'), schedules: readOnly('schedules'), quizResults: readOnly('quizResults'), sessions: readOnly('sessions'),
   };

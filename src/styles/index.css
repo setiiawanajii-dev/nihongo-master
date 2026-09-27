@@ -400,3 +400,13 @@ h3 { font-size: 17px; font-weight: 650; }
 .guide-bottom { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding: 24px 0; color: var(--green); }
 @media (max-width: 700px) { .guide-topics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .guide-section { padding: 22px 18px; } }
 @media (max-width: 400px) { .guide-topics { grid-template-columns: 1fr; } }
+
+.delete-data-card { border-color: var(--accent); }
+.button.delete-data-button { color: #a43131; border-color: #c58484; }
+.button.delete-data-confirm { background: #a43131; color: #fff; border-color: #a43131; }
+.dark .button.delete-data-button { color: #ffb4ad; border-color: #a76964; }
+
+.success-dialog-content { display: grid; justify-items: center; gap: 22px; padding: 12px 0 4px; text-align: center; }
+.success-dialog-icon { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; color: var(--green); background: var(--green-soft); }
+.success-dialog-content p { font-size: 14px; line-height: 1.85; max-width: 420px; }
+.success-dialog-content .button { min-width: 140px; }

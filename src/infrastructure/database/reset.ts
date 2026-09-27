@@ -18,3 +18,12 @@ export async function resetLearningProgress(confirmed: boolean): Promise<void> {
     // Keep meta: resetting progress must not restore removed demonstration data.
   });
 }
+
+/** Clear user learning data atomically, without loading PDF blobs into memory. */
+export async function deleteAllLearningData(confirmation: string): Promise<void> {
+  if (confirmation !== 'HAPUS SEMUA') throw new Error('Ketik HAPUS SEMUA untuk mengonfirmasi penghapusan.');
+  await transact(stores, 'readwrite', async tx => {
+    // Migration markers are internal state, not user content. Keep them to prevent reseeding.
+    for (const store of stores) if (store !== 'meta') await tx.clear(store);
+  });
+}

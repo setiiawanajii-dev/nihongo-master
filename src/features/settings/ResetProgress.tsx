@@ -1,3 +1,4 @@
+import { SuccessDialog } from '../../components/SuccessDialog';
 import { useState } from 'react';
 import { useData } from '../../app/data/DataProvider';
 import { database } from '../../services/database';
@@ -13,7 +14,7 @@ export function ResetProgress() {
     <p className="detail-paragraph">Reset mastery, jadwal review, hasil quiz, sesi belajar, waktu belajar, streak, dan progres membaca PDF. Semua materi kembali berstatus NEW / belum dinilai.</p>
     <p className="detail-paragraph muted">Vocabulary, grammar, contoh, kategori, PDF, hasil ekstraksi, catatan pribadi, favorit, dan bookmark tetap disimpan.</p>
     <Button variant="secondary" disabled={loading || !!dataError || busy} onClick={() => { setConfirmation(''); setSuccess(false); setOpen(true); }}>Reset progres belajar</Button>
-    {success && <p className="setting-feedback" role="status">Progres berhasil direset. Materi Anda tetap tersimpan dan siap dipelajari kembali.</p>}
+
     {open && <Modal title="Reset semua progres belajar?" busy={busy} onClose={() => setOpen(false)}>
       <p className="detail-paragraph">Riwayat quiz, sesi yang sedang berjalan, penilaian, jadwal review, dan tracking membaca akan dihapus. Tindakan ini tidak dapat dibatalkan. Tab aplikasi lain pada browser ini akan dimuat ulang.</p>
       <p className="detail-paragraph">Materi, file PDF, catatan, favorit, dan bookmark tidak dihapus. Ekspor JSON/CSV saat ini tidak mencadangkan progres.</p>
@@ -23,5 +24,6 @@ export function ResetProgress() {
         <div className="form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setOpen(false)}>Batal</Button><Button type="submit" disabled={busy || confirmation !== 'RESET'}>{busy ? 'Mereset…' : 'Ya, reset semua progres'}</Button></div>
       </form>
     </Modal>}
+    {success && <SuccessDialog title="Progres berhasil direset" message="Progres berhasil direset. Mastery dan tracking belajar kembali ke awal. Materi, PDF, catatan, favorit, dan bookmark tetap tersimpan." onClose={() => setSuccess(false)} />}
   </Card>;
 }

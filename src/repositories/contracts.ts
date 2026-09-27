@@ -40,6 +40,7 @@ export interface LearningDatabase {
   };
   initialize(): Promise<void>;
   resetLearningProgress(confirmed: boolean): Promise<void>;
+  deleteAllLearningData(confirmation: string): Promise<void>;
   extraction: {
     runs(): Promise<ExtractionRun[]>;
     drafts(): Promise<ExtractionDraft[]>;
