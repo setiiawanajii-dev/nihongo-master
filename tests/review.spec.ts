@@ -1,4 +1,5 @@
-import {expect,test,type Page} from '@playwright/test';
+import {expect,test} from './fixtures';
+import type {Page} from '@playwright/test';
 import type {LearningDatabase} from '../src/repositories/contracts';
 import type {ReviewRun} from '../src/domain/models';
 test.setTimeout(100_000);

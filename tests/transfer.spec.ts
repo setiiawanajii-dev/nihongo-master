@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './fixtures';
 import {parseImport,exportCsv,exportJson,validateRow} from '../src/domain/transfer/format';
 import type {LearningDatabase} from '../src/repositories/contracts';
 test.setTimeout(120_000);
@@ -24,7 +24,7 @@ test('merge retains IDs, progress, favorites, schedules and sessions; keep both 
 });
 
 
-test('exported JSON/CSV round-trip into a fresh bank with all examples and sources; reimport merges without duplicates',async({page,context})=>{
+test('exported JSON/CSV round-trip into a fresh bank with all examples and categories; reimport merges without duplicates',async({page,context})=>{
  await page.goto('/data-transfer');await expect(page.getByRole('button',{name:'Periksa impor'})).toBeVisible();const portable=await page.evaluate(async()=>{const u='/src/services/database.ts',f='/src/domain/transfer/format.ts';const db=(await import(u)).database as LearningDatabase;const rows=await db.transfer.export();const format=await import(f);return {json:format.exportJson(rows),csv:format.exportCsv(rows),count:rows.length,examples:rows.reduce((n,r)=>n+(r.examples?.length??0),0)};});
  const isolated=await context.browser()!.newContext();const fresh=await isolated.newPage();await fresh.goto('/data-transfer');await expect(fresh.getByRole('button',{name:'Periksa impor'})).toBeVisible();
  const result=await fresh.evaluate(async(payload)=>{const u='/src/services/database.ts',f='/src/domain/transfer/format.ts';const db=(await import(u)).database as LearningDatabase;for(const v of await db.vocabulary.list())await db.vocabulary.delete(v.id);for(const g of await db.grammar.list())await db.grammar.delete(g.id);
@@ -43,7 +43,7 @@ test('UI file validation, preview actions, CSV import, exports and responsive la
 
 test('batch duplicates merge deterministically and live progress changes survive the preview window',async({page})=>{
  await page.goto('/data-transfer');await expect(page.getByRole('button',{name:'Periksa impor'})).toBeVisible();const result=await page.evaluate(async()=>{const u='/src/services/database.ts';const db=(await import(u)).database as LearningDatabase;
- const v=(await db.vocabulary.list())[0];const imported={type:'vocabulary' as const,kanji:'追加試験',kana:'ついかしけん',meaning:'pertama',level:'N3' as const,additionalSources:[{sourcePdfId:'portable-reference',sourcePage:2,sourceName:'Sumber tambahan.pdf'}]};
+ const v=(await db.vocabulary.list())[0];const imported={type:'vocabulary' as const,kanji:'追加試験',kana:'ついかしけん',meaning:'pertama',level:'N3' as const};
  let preview=await db.transfer.preview([imported,imported,{...imported,meaning:'digabung ke pertama'}]);await db.learning.recordVocabularyReview({itemId:v.id,rating:1,eventId:crypto.randomUUID(),sessionId:crypto.randomUUID(),activeDurationSeconds:7});const progress=await db.progress.list();const summary=await db.transfer.commit(preview,['ignore','keep-both','merge'],[null,null,null]);
  const items=(await db.vocabulary.list()).filter(i=>i.kanji===imported.kanji);
  preview=await db.transfer.preview([{...imported,kanji:'別の語'}]);await db.transfer.commit(preview,['ignore'],[null]);return {summary,items:items.map(i=>i.meaning).sort(),progress,after:await db.progress.list()};});

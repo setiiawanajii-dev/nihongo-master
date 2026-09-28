@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import type { LearningDatabase } from '../src/repositories/contracts';
 test.setTimeout(90_000);
 const detail = '/grammar/seed-g-N3-01';
@@ -16,7 +16,7 @@ test('grammar filters, pagination and canonical detail preserve URL on refresh',
 test('grammar favorite, related link, review queue and self-assessment survive refresh', async ({ page }) => {
  await page.goto(detail); await expect(page.getByRole('button',{name:'Favoritkan',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Favoritkan',exact:true}).click(); await page.reload(); await expect(page.getByRole('button',{name:'Hapus favorit',exact:true})).toHaveAttribute('aria-pressed','true');
- await page.getByRole('button',{name:'Edit materi',exact:true}).click(); await page.getByRole('dialog').getByLabel('〜ようになる', {exact:true}).check(); await page.getByLabel('Kesalahan umum',{exact:true}).fill('Bedakan kebiasaan yang diusahakan dengan perubahan kemampuan.'); await page.getByRole('button',{name:'Simpan materi',exact:true}).click(); await expect(page.getByRole('dialog')).toBeHidden();
+ await page.getByRole('button',{name:'Edit materi',exact:true}).click(); await page.getByRole('dialog').getByLabel('〜ようになる', {exact:true}).check(); await page.getByLabel('Kesalahan umum',{exact:true}).fill('Bedakan kebiasaan yang diusahakan dengan perubahan kemampuan.'); await page.getByRole('checkbox',{name:/Saya sudah memeriksa/}).check(); await page.getByRole('button',{name:'Simpan materi',exact:true}).click(); await expect(page.getByRole('dialog')).toBeHidden();
  await page.getByRole('link',{name:/〜ようになる ·/}).click(); await expect(page).toHaveURL(/seed-g-N3-02$/); await page.goto(detail);
  await page.getByRole('button',{name:'Review sekarang',exact:true}).click(); await page.getByRole('link',{name:'Lihat antrean review'}).click(); await expect(page.locator('.content-card')).toHaveCount(1);
  await page.getByRole('link',{name:'Detail',exact:true}).click(); await expect(page.getByRole('link',{name:'Kembali ke review'})).toHaveAttribute('href','/review?type=grammar');
@@ -43,6 +43,6 @@ test('grammar mastery requires all dimensions; retries are idempotent, invalid i
  expect(result.count).toBe(1); expect(result.states[0]).toBe('NEW'); expect(result.states[1]).toBe('LEARNING'); expect(result.states[2]).toBe('REVIEW'); expect(result.states.slice(2,-1)).not.toContain('MASTERED'); expect(result.mastered).toMatchObject({status:'MASTERED',masteryScore:100,reviewCount:9}); expect(result.invalid).toBe(true);expect(result.unchanged).toBe(9);expect(result.remaining).toBe(0);expect(result.schedule).toBeUndefined();
 });
 test('grammar mobile and dark layout do not overflow',async({page})=>{
- for(const width of [320,390,768,1440]) {await page.setViewportSize({width,height:900}); await page.goto('/grammar');await expect(page.locator('.content-card').first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.goto(detail);await expect(page.getByLabel('Jawaban latihan')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);}
+ for(const width of [320,390,768,1440]) {await page.setViewportSize({width,height:900}); await page.goto('/grammar');await expect(page.getByText('Membuka database pembelajaran…',{exact:true})).toBeHidden({timeout:15_000});await expect(page.locator('.content-card').first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.goto(detail);await expect(page.getByLabel('Jawaban latihan')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);}
  await page.evaluate(()=>document.documentElement.classList.add('dark')); await page.screenshot({path:'test-results/grammar-detail.png',fullPage:true});
 });

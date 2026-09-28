@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test, emptyTest } from './fixtures';
 import { calculateProgress } from '../src/domain/analytics/progress';
 import type { ProgressSnapshot } from '../src/domain/analytics/progress';
 import type { LearningDatabase } from '../src/repositories/contracts';
@@ -10,8 +10,8 @@ test('streak uses calendar dates, duplicates, yesterday grace and excludes futur
  const a = calculateProgress(data,'2026-01-06'); expect(a.study.current).toBe(2); expect(a.study.longest).toBe(4); expect(a.study.total).toBe(7); expect(a.study.seconds).toBe(420); expect(calculateProgress(data,'2026-01-07').study.current).toBe(0);
  const dst = empty(); dst.sessions = ['2026-03-07','2026-03-08','2026-03-09'].map(d => session(d)); expect(calculateProgress(dst,'2026-03-09').study.current).toBe(3); expect(calculateProgress(empty(),'2026-03-09').quiz.accuracy).toBeNull();
 });
-test('empty progress is honest, charts and metrics have usable mobile and dark layouts', async ({page}) => {
- await page.goto('/progress'); await expect(page.getByTestId('vocabulary-metrics')).toContainText('70'); await expect(page.getByTestId('grammar-metrics')).toContainText('30'); await expect(page.getByTestId('quiz-metrics')).toContainText('—'); await expect(page.getByText('Belum ada quiz selesai.',{exact:false})).toBeVisible();
+emptyTest('empty progress is honest, charts and metrics have usable mobile and dark layouts', async ({page}) => {
+ await page.goto('/progress'); await expect(page.getByTestId('vocabulary-metrics')).toContainText('0'); await expect(page.getByTestId('grammar-metrics')).toContainText('0'); await expect(page.getByTestId('quiz-metrics')).toContainText('—'); await expect(page.getByText('Belum ada quiz selesai.',{exact:false})).toBeVisible();
  for (const width of [320,390,768,1440]) { await page.setViewportSize({width,height:1000}); expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true); }
  await page.screenshot({path:'test-results/progress-empty.png',fullPage:true});
 });

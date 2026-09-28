@@ -1,8 +1,9 @@
+import { installTestBank } from './fixtures';
 import { expect, test } from '@playwright/test';
 
 test.setTimeout(60_000);
 
-const routes = ['/dashboard', '/vocabulary', '/grammar', '/quiz', '/review', '/progress', '/materials', '/material-check', '/data-transfer', '/favorites', '/settings'];
+const routes = ['/dashboard', '/vocabulary', '/grammar', '/quiz', '/review', '/progress', '/guide', '/feedback', '/data-transfer', '/favorites', '/settings'];
 
 test('every route opens directly and survives a refresh without runtime errors', async ({ page }) => {
   // This scenario performs 22 full page loads; allow time on slower machines.
@@ -56,7 +57,8 @@ test('theme persists through navigation and reload, and settings match the heade
   expect(await page.evaluate(() => localStorage.getItem('nihongo-master:theme'))).toBe('light');
 });
 
-test('demo search and level filters change results', async ({ page }) => {
+test('explicit test content search and level filters change results', async ({ page }) => {
+  await installTestBank(page);
   await page.goto('/vocabulary');
   await page.getByRole('textbox', { name: 'Cari vocabulary' }).fill('kaigo');
   await expect(page.locator('.content-card')).toHaveCount(1);

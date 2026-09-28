@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, emptyTest } from './fixtures';
+import type { Page } from '@playwright/test';
 import type { LearningDatabase } from '../src/repositories/contracts';
 
 test.setTimeout(90_000);
@@ -9,7 +10,7 @@ async function ready(page: Page, route = '/vocabulary') {
   await expect(page.getByRole('alert')).toHaveCount(0);
 }
 
-test('fresh database remains empty after refresh', async ({ page }) => {
+emptyTest('fresh database remains empty after refresh', async ({ page }) => {
  await ready(page);
  const read = () => page.evaluate(async () => { const u='/src/services/database.ts'; const db=(await import(u)).database as LearningDatabase; return {v:await db.vocabulary.list(),g:await db.grammar.list(),p:await db.progress.list()}; });
  expect(await read()).toEqual({v:[],g:[],p:[]});
@@ -151,7 +152,7 @@ test('validation rolls back invalid edits, prevents duplicates, and deletes depe
     const url = '/src/services/database.ts'; const db = (await import(url)).database as LearningDatabase;
     const defaults = '/src/services/progress.ts'; const { newProgress } = await import(defaults);
     const rejected: string[] = [];
-    for (const [name, update] of Object.entries({ page: { sourcePage: 0 }, pdf: { sourcePdfId: 'missing' }, category: { categoryIds: ['missing'] }, meaning: { meaning: '' } })) {
+    for (const [name, update] of Object.entries({ category: { categoryIds: ['missing'] }, meaning: { meaning: '' } })) {
       try { await db.vocabulary.update('seed-v-N3-01', update); } catch { rejected.push(name); }
     }
     const row = (await db.vocabulary.get('seed-v-N3-01'))!;
@@ -164,7 +165,7 @@ test('validation rolls back invalid edits, prevents duplicates, and deletes depe
     await db.initialize();
     return { rejected, remaining: (await db.vocabulary.list()).length, row: await db.vocabulary.get(row.id), progress: await db.progress.list(), favorites: await db.favorites.list(), examples: (await db.examples.list()).filter(e => e.itemId === row.id) };
   });
-  expect(result.rejected).toEqual(['page', 'pdf', 'category', 'meaning', 'duplicate', 'unearned-mastery']);
+  expect(result.rejected).toEqual(['category', 'meaning', 'duplicate', 'unearned-mastery']);
   expect(result.remaining).toBe(69); expect(result.row).toBeUndefined();
   expect(result.progress).toEqual([]); expect(result.favorites).toEqual([]); expect(result.examples).toEqual([]);
   await page.reload();
@@ -172,7 +173,7 @@ test('validation rolls back invalid edits, prevents duplicates, and deletes depe
   await expect(page.locator('.content-card')).toHaveCount(0);
 });
 
-test('two tabs seed once and broadcast saved favorite changes', async ({ page, context }) => {
+test('two tabs share the explicit test bank and broadcast saved favorite changes', async ({ page, context }) => {
   const other = await context.newPage();
   await Promise.all([ready(page), ready(other, '/favorites')]);
   await page.getByRole('textbox', { name: 'Cari vocabulary' }).fill('kaigo');
@@ -184,7 +185,7 @@ test('two tabs seed once and broadcast saved favorite changes', async ({ page, c
   expect(count).toBe(70);
 });
 
-test('IndexedDB failure is visible instead of pretending to save data', async ({ page }) => {
+emptyTest('IndexedDB failure is visible instead of pretending to save data', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, 'indexedDB', { get: () => undefined }));
   await page.goto('/vocabulary');
   await expect(page.getByRole('alert')).toContainText('IndexedDB tidak tersedia');

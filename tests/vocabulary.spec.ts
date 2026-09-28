@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, emptyTest } from './fixtures';
+import type { Page } from '@playwright/test';
 import type { LearningDatabase } from '../src/repositories/contracts';
 import type { FlashcardRating } from '../src/domain/models';
 
@@ -19,7 +20,7 @@ test('detail route, full content, refresh, unknown id and return to filtered pag
   await expect(page).toHaveURL(/\/vocabulary\/seed-v-N3-/);
   await expect(page.locator('main h1')).toHaveText(word);
   await expect(page.locator('.example-block')).toHaveCount(1);
-  await expect(page.locator('.entry-source')).toContainText('DUMMY-N3-vocabulary.pdf');
+  await expect(page.locator('main')).not.toContainText('Sumber PDF');
   await expect(page.locator('.detail-content')).toContainText('Catatan materi');
   await page.reload();
   await expect(page.locator('main h1')).toHaveText(word);
@@ -140,7 +141,7 @@ test('mastered and mastery sort use saved evidence and skip does not write progr
   expect(p).toBeUndefined();
 });
 
-test('version 1 migration keeps content, progress and favorites', async ({ page }) => {
+emptyTest('version 1 migration keeps content, progress and favorites', async ({ page }) => {
   // Run before app code, only in this isolated browser context.
   await page.addInitScript(() => {
     (window as unknown as { migrationReady: Promise<void> }).migrationReady = new Promise(resolve => {

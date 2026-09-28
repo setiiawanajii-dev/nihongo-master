@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, emptyTest } from './fixtures';
+import type { Page } from '@playwright/test';
 import type { LearningDatabase } from '../src/repositories/contracts';
 import type { QuizAttempt, QuizConfig } from '../src/domain/models';
 
@@ -12,7 +13,7 @@ test('all modes, sizes, N3/N2, twelve types and randomized valid options; sparse
   const url='/src/services/database.ts', engineUrl='/src/domain/quiz/engine.ts';const db=(await import(url)).database as LearningDatabase;const e=await import(engineUrl);
   const data={vocabulary:await db.vocabulary.list(),grammar:await db.grammar.list(),examples:await db.examples.list(),categories:await db.categories.list()};
   const types=e.questionTypes.map((q:{value:string})=>q.value); const counts:number[]=[];let valid=true; const allTypes=new Set<string>();
-  for(const mode of ['vocabulary','grammar','mixed']) for(const level of ['N3','N2']) for(const count of [10,20,30,50]) {const config={mode,count,levels:[level],categoryIds:[],types};const pool=e.buildQuestionPool(data,config);pool.forEach((q:{type:string})=>allTypes.add(q.type));const questions=e.chooseQuestions(pool,config);counts.push(questions.length);valid &&= new Set(questions.map((q:{id:string})=>q.id)).size===count && questions.every((q:{sourcePdfId:string;sourcePage:number;answerFormat:string;options:{id:string;text:string}[];correctAnswer:string})=>!!q.sourcePdfId&&q.sourcePage>0&&(q.answerFormat==='text'||(q.options.length===4&&new Set(q.options.map(o=>o.text)).size===4&&q.options.filter(o=>o.id===q.correctAnswer).length===1)));}
+  for(const mode of ['vocabulary','grammar','mixed']) for(const level of ['N3','N2']) for(const count of [10,20,30,50]) {const config={mode,count,levels:[level],categoryIds:[],types};const pool=e.buildQuestionPool(data,config);pool.forEach((q:{type:string})=>allTypes.add(q.type));const questions=e.chooseQuestions(pool,config);counts.push(questions.length);valid &&= new Set(questions.map((q:{id:string})=>q.id)).size===count && questions.every((q:{itemId:string;answerFormat:string;options:{id:string;text:string}[];correctAnswer:string})=>!!q.itemId&&(q.answerFormat==='text'||(q.options.length===4&&new Set(q.options.map(o=>o.text)).size===4&&q.options.filter(o=>o.id===q.correctAnswer).length===1)));}
   const config={mode:'mixed',count:20,levels:['N3'],categoryIds:[],types};const pool=e.buildQuestionPool(data,config); const a=e.chooseQuestions(pool,config,()=>0.1),b=e.chooseQuestions(pool,config,()=>0.9);
   return {counts,valid,types:[...allTypes],orderA:a.map((q:{id:string})=>q.id),orderB:b.map((q:{id:string})=>q.id),optionsA:a[0].options,optionsB:b[0].options};
  });
@@ -35,7 +36,7 @@ test('20-question UI quiz scores 85%, Kotoba 90%, Bunpou 80%; mistakes, history 
   if(i===0) {await expect(page.getByText('Soal 2 / 20',{exact:true})).toBeVisible();await page.reload();await expect(page.getByText('Soal 2 / 20',{exact:true})).toBeVisible();expect((await attempt(page)).questions).toEqual(first.questions);}
  }
  await expect(page).toHaveURL(/quiz\/result\?id=/);await expect(page.locator('.quiz-score')).toHaveText('85%');await expect(page.locator('.quiz-score-count')).toHaveText('17 / 20');await expect(page.locator('.quiz-breakdown')).toContainText('Kotoba90%');await expect(page.locator('.quiz-breakdown')).toContainText('Bunpou80%');await expect(page.locator('.quiz-mistake')).toHaveCount(3);
- for(const card of await page.locator('.quiz-mistake').all()){await expect(card).toContainText('Jawabanmu');await expect(card).toContainText('Jawaban benar');await expect(card).toContainText('Pembahasan');await expect(card).toContainText('Halaman');}
+ for(const card of await page.locator('.quiz-mistake').all()){await expect(card).toContainText('Jawabanmu');await expect(card).toContainText('Jawaban benar');await expect(card).toContainText('Pembahasan');await expect(card.getByRole('link',{name:'Review Material',exact:true})).toHaveAttribute('href',/^\/(vocabulary|grammar)\//);}
  await page.reload();await expect(page.locator('.quiz-score')).toHaveText('85%');await page.getByRole('link',{name:'Kembali ke quiz & riwayat'}).click();await expect(page.locator('.quiz-history-row')).toContainText('85%');await page.getByRole('link',{name:'Lihat hasil',exact:true}).click();await expect(page.locator('.quiz-mistake')).toHaveCount(3);
  const saved=await page.evaluate(async()=>{const url='/src/services/database.ts';const db=(await import(url)).database as LearningDatabase;return {results:await db.quizResults.list(),sessions:await db.sessions.list(),progress:await db.progress.list()};});expect(saved.results).toHaveLength(1);expect(saved.sessions).toHaveLength(1);expect(saved.progress.reduce((sum,p)=>sum+p.correctCount,0)).toBe(17);
 });
@@ -66,13 +67,13 @@ test('empty results, unknown attempts, responsive custom form, runner and result
  await page.goto(`/quiz/result?id=${a.id}`);await expect(page.locator('.quiz-mistake')).toHaveCount(10);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'test-results/quiz-result-mobile.png',fullPage:false});await page.setViewportSize({width:1440,height:1000});await page.evaluate(()=>document.documentElement.classList.add('dark'));await expect(page.locator('.desktop-sidebar .nav-item.active')).toHaveCSS('background-color','rgb(42, 65, 51)');await page.screenshot({path:'test-results/quiz-result-dark.png',fullPage:false});
 });
 
-test('version 2 migration preserves existing content and notes while adding quiz storage',async({page})=>{
+emptyTest('version 2 migration preserves existing content and notes while adding quiz storage',async({page})=>{
  await page.addInitScript(async()=>{
   if(sessionStorage.getItem('quiz-v2-fixture')) return;sessionStorage.setItem('quiz-v2-fixture','1');
   await new Promise<void>((resolve,reject)=>{const r=indexedDB.open('nihongo-master',2);r.onupgradeneeded=()=>{for(const name of ['vocabulary','grammar','examples','categories','materials','pages','questions','progress','favorites','schedules','quizResults','sessions','reviewEvents','meta'])r.result.createObjectStore(name,{keyPath:'id'});};r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result;const tx=db.transaction(['meta','progress','categories'],'readwrite');tx.objectStore('categories').put({id:'legacy-category',name:'Kategori pribadi',description:'Tetap ada',isSeed:false,createdAt:'2026-01-01T00:00:00.000Z',updatedAt:'2026-01-01T00:00:00.000Z'});tx.objectStore('progress').put({id:'grammar:legacy',itemId:'legacy',itemType:'grammar',status:'NEW',masteryScore:null,dimensions:{},reviewCount:0,correctCount:0,wrongCount:0,lastReviewed:null,nextReview:null,notes:'Catatan sebelum migrasi',createdAt:'2026-01-01T00:00:00.000Z',updatedAt:'2026-01-01T00:00:00.000Z'});tx.oncomplete=()=>{db.close();resolve();};};});
  });
- await ready(page);await expect(page.getByRole('button',{name:'Mulai quiz'})).toBeEnabled();
- const migrated=await page.evaluate(async()=>{const url='/src/services/database.ts';const db=(await import(url)).database as LearningDatabase;return {note:(await db.progress.get('grammar:legacy'))?.notes,category:(await db.categories.get('legacy-category'))?.name,attempts:await db.quizAttempts.list(),vocabulary:(await db.vocabulary.list()).length};});expect(migrated).toEqual({note:'Catatan sebelum migrasi',category:'Kategori pribadi',attempts:[],vocabulary:70});
+ await ready(page);await expect(page.getByRole('button',{name:'Mulai quiz'})).toBeDisabled();
+ const migrated=await page.evaluate(async()=>{const url='/src/services/database.ts';const db=(await import(url)).database as LearningDatabase;return {note:(await db.progress.get('grammar:legacy'))?.notes,category:(await db.categories.get('legacy-category'))?.name,attempts:await db.quizAttempts.list(),vocabulary:(await db.vocabulary.list()).length};});expect(migrated).toEqual({note:'Catatan sebelum migrasi',category:'Kategori pribadi',attempts:[],vocabulary:0});
 });
 
 test('quiz and self-rated evidence remain mixed in both directions',async({page})=>{

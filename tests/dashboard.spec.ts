@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { calculateDashboard } from '../src/domain/analytics/dashboard';
 import { seedVocabulary, seedGrammar, seedExamples, seedCategories } from '../src/data/seed';
 import { newProgress } from '../src/services/progress';
@@ -43,5 +43,5 @@ test('dashboard reflects real saved reviews, actionable recommendations and refr
 test('new material suggestions disappear after assessment and database changes propagate across tabs',async({page,context})=>{
  await page.goto('/dashboard');await expect(page.getByTestId('daily-learning')).toBeVisible();await page.getByText('Lihat saran vocabulary',{exact:true}).click();const first=page.getByTestId('daily-learning').locator('details').first().locator('a').first();const href=await first.getAttribute('href');expect(href).toBeTruthy();const id=decodeURIComponent(href!.split('/').pop()!);
  const other=await context.newPage();await other.goto('/dashboard');await expect(other.getByTestId('daily-learning')).toBeVisible();await other.evaluate(async(id)=>{const u='/src/services/database.ts';const db=(await import(u)).database as LearningDatabase;await db.learning.recordVocabularyReview({itemId:id,rating:3,eventId:crypto.randomUUID(),sessionId:crypto.randomUUID(),activeDurationSeconds:10});const c=new BroadcastChannel('nihongo-master:data');c.postMessage('changed');c.close();},id);
- await expect(page.getByTestId('daily-learning').locator(`a[href="${href}"]`)).toHaveCount(0);await expect(page.getByTestId('today-learned')).toContainText('1 vocabulary');await other.close();
+ await expect(page.getByTestId('daily-learning').locator(`a[href="${href}"]`)).toHaveCount(0);await expect(page.getByTestId('today-learned')).toContainText('1 vocabulary', { timeout: 15_000 });await other.close();
 });
