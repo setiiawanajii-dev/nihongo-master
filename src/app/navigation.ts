@@ -5,7 +5,7 @@ export const navigation = [
   { path: '/vocabulary', label: 'Vocabulary', japanese: '単語', icon: BookOpen, group: 'learn' },
   { path: '/grammar', label: 'Grammar', japanese: '文法', icon: Languages, group: 'learn' },
   { path: '/quiz', label: 'Quiz', japanese: 'クイズ', icon: ListChecks, group: 'learn' },
-  { path: '/review', label: 'Review', japanese: '復習', icon: RotateCcw, group: 'learn' },
+  { path: '/review', label: 'Ulangi pelajaran', japanese: '復習', icon: RotateCcw, group: 'learn' },
   { path: '/progress', label: 'Progress', japanese: '学習進捗', icon: ChartNoAxesCombined, group: 'library' },
   { path: '/favorites', label: 'Favorit', japanese: 'お気に入り', icon: Heart, group: 'library' },
   { path: '/data-transfer', label: 'Import / Export', japanese: 'データ', icon: Files, group: 'library' },

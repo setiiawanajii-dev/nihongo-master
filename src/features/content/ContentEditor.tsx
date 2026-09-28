@@ -7,7 +7,7 @@ import { Modal } from '../../components/Modal';
 import { Button } from '../../components/ui';
 import { ErrorMessage, useOperation } from '../../components/DataState';
 
-export function ContentEditor({ kind, item, onClose }: { kind: ContentKind; item?: Vocabulary | Grammar; onClose: () => void }) {
+export function ContentEditor({ kind, item, onClose, onCreated }: { kind: ContentKind; item?: Vocabulary | Grammar; onClose: () => void; onCreated?: (id: string) => void }) {
   const { categories, grammar, mutate } = useData();
   const { busy, error, run } = useOperation();
   const v = kind === 'vocabulary' ? item as Vocabulary | undefined : undefined;
@@ -20,17 +20,18 @@ export function ContentEditor({ kind, item, onClose }: { kind: ContentKind; item
       categoryIds: form.getAll('categoryIds').map(String),
       notes: string('notes'), difficulty: Number(form.get('difficulty')) as Vocabulary['difficulty'],
       isSeed: item?.isSeed ?? false };
+    let createdId: string | undefined;
     void run(() => mutate(async () => {
       if (kind === 'vocabulary') {
         const data = { ...common, kanji: string('kanji'), kana: string('kana'), romaji: string('romaji'), partOfSpeech: string('partOfSpeech') };
-        if (item) await database.vocabulary.update(item.id, data); else await database.vocabulary.create(data);
+        if (item) await database.vocabulary.update(item.id, data); else createdId = (await database.vocabulary.create(data)).id;
       } else {
         const templateFields = ['quizSentence','quizTranslation','quizAnswer','quizExplanation','quizWrong1','quizWrong2','quizWrong3'];
         const quizTemplate = templateFields.some(key => string(key)) ? validateGrammarTemplate({ sentence: string('quizSentence'), translation: string('quizTranslation'), blankAnswer: string('quizAnswer'), explanation: string('quizExplanation'), wrongSentences: [1,2,3].map(n => string('quizWrong'+n)).filter(Boolean), validated: form.get('quizValidated') === 'on' }) : null;
         const data = { ...common, quizTemplate, pattern: string('pattern'), formation: string('formation'), explanation: string('explanation'), commonMistakes: string('commonMistakes'), comparisonIds: form.getAll('comparisonIds').map(String) };
-        if (item) await database.grammar.update(item.id, data); else await database.grammar.create(data);
+        if (item) await database.grammar.update(item.id, data); else createdId = (await database.grammar.create(data)).id;
       }
-    }), onClose);
+    }), () => { onClose(); if (createdId) onCreated?.(createdId); });
   }
   return <Modal title={`${item ? 'Edit' : 'Tambah'} ${kind}`} onClose={onClose} busy={busy}><form onSubmit={save} className="data-form"><fieldset disabled={busy}>
     {kind === 'vocabulary' ? <><label>Kanji / kata Jepang<input name="kanji" required defaultValue={v?.kanji} /></label><div className="form-columns"><label>Kana<input name="kana" required defaultValue={v?.kana} /></label><label>Romaji<input name="romaji" required={!item?.importedFromFile} defaultValue={v?.romaji} /></label></div><label>Part of speech<input name="partOfSpeech" required={!item?.importedFromFile} defaultValue={v?.partOfSpeech ?? '名詞'} /></label></> : <><label>Grammar pattern<input name="pattern" required defaultValue={g?.pattern} /></label><label>Pola pembentukan<input name="formation" required defaultValue={g?.formation} /></label><label>Penjelasan<textarea aria-label="Penjelasan" name="explanation" required={!item?.importedFromFile} defaultValue={g?.explanation} /></label><label>Kesalahan umum<textarea aria-label="Kesalahan umum" name="commonMistakes" defaultValue={g?.commonMistakes} /></label></>}

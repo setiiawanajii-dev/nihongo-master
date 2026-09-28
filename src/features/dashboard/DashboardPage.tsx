@@ -1,3 +1,4 @@
+import { GettingStarted } from '../onboarding/GettingStarted';
 import { SmartDashboard } from './SmartDashboard';
 import { useData } from '../../app/data/DataProvider';
 import { DataState } from '../../components/DataState';
@@ -10,9 +11,10 @@ import { LevelProgress } from '../progress/ProgressCharts';
 import { duration, percent } from '../../domain/analytics/progress';
 
 export function DashboardPage() {
-  const { vocabulary, grammar, progress } = useData();
+  const { vocabulary, grammar, progress, loading, error } = useData();
   const analytics = useProgressAnalytics();
   const date = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  if (!loading && !error && vocabulary.length === 0 && grammar.length === 0) return <><PageHeading eyebrow="ホーム / DASHBOARD" title="Mulai perjalanan belajarmu." description="Ruang belajar Bahasa Jepang, sesuai materimu sendiri." /><GettingStarted /></>;
   return <>
     <PageHeading eyebrow="ホーム / DASHBOARD" title="Langkah kecil, kemampuan besar." description="Selamat datang di ruang belajar Bahasa Jepang-mu."><span className="date-label">{date}</span></PageHeading>
     <DataState><SmartDashboard /><div className="info-banner">Database aktif · {vocabulary.length} vocabulary · {grammar.length} grammar · {progress.length} catatan progres</div><div className="stats-grid">{[
