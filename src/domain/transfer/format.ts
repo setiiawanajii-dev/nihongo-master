@@ -1,7 +1,9 @@
-import type { ContentKind, JLPTLevel } from '../models';
+import { validateGrammarTemplate } from '../quiz/grammar-template';
+import type { ContentKind, JLPTLevel, GrammarQuizTemplate } from '../models';
 export type DuplicateAction = 'merge' | 'keep-both' | 'ignore';
 export interface ImportExample { example: string; translation: string }
 export interface ImportRow {
+ quizTemplate?: GrammarQuizTemplate | null;
  type: ContentKind; id?: string; kanji?: string; kana?: string; grammar?: string; meaning: string; pattern?: string; level: JLPTLevel;
  category?: string[]; examples?: ImportExample[];
  romaji?: string; partOfSpeech?: string; explanation?: string; notes?: string; commonMistakes?: string;
@@ -9,7 +11,7 @@ export interface ImportRow {
 export interface ImportPreview { rows:ImportRow[]; matches:{ids:string[]; earlier:number|null}[]; stamp:string }
 export const normalize = (s:string) => s.normalize('NFKC').trim().toLocaleLowerCase('id');
 export function identity(row:ImportRow) { return row.type+':'+(row.type==='vocabulary' ? [row.kanji!,row.kana!].map(normalize).join('\u0000') : normalize(row.grammar!)); }
-const headers=['csvEncoding','type','id','kanji','kana','grammar','meaning','pattern','level','category','example','translation','examples','romaji','partOfSpeech','explanation','notes','commonMistakes'];
+const headers=['csvEncoding','type','id','kanji','kana','grammar','meaning','pattern','level','category','example','translation','examples','romaji','partOfSpeech','explanation','notes','commonMistakes','quizTemplate'];
 const optional=['id','romaji','partOfSpeech','explanation','notes','commonMistakes'] as const;
 function str(value:unknown,label:string,required=false) { if(typeof value!=='string' || value.length>20_000 || (required&&!value.trim())) throw new Error(`${label}: teks ${required?'wajib diisi dan ':''}maksimal 20.000 karakter.`);return value.trim(); }
 function jsonCell(value:unknown) { return typeof value==='string'?JSON.parse(value):value; }
@@ -24,6 +26,7 @@ export function validateRow(value:unknown, fallback?:ContentKind):ImportRow {
  if(x.examples!==undefined&&x.examples!=='') {const examples=jsonCell(x.examples);if(!Array.isArray(examples)||examples.length>100)throw new Error('examples harus array maksimal 100 contoh.');row.examples=examples.map(e=>{if(!e||typeof e!=='object')throw new Error('Contoh tidak valid.');return {example:str(e.example,'example',true),translation:str(e.translation??'','translation')};});}
  else if(x.example!==undefined&&x.example!==''){row.examples=[{example:str(x.example,'example',true),translation:str(x.translation??'','translation')}];}
  else if(x.translation)throw new Error('translation memerlukan example.');
+ if (type === 'grammar' && x.quizTemplate !== undefined && x.quizTemplate !== '') { const template = jsonCell(x.quizTemplate); row.quizTemplate = template === null ? null : validateGrammarTemplate(template); }
  return row;
 }
 // RFC 4180: commas, doubled quotes, multiline fields, CRLF and UTF-8 BOM.

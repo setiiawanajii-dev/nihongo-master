@@ -6,7 +6,16 @@ export const reviewGrades = [
  { value: 2, label: '🙂 Good', description: 'Ingat dengan baik' },
  { value: 3, label: '🔥 Easy', description: 'Sangat mudah' },
 ] as const;
-export const requiredDimensions = (type: ContentKind): QuizQuestion['dimension'][] => type === 'vocabulary' ? ['recognition','meaning','kanji','usage'] : ['understanding','usage','sentence'];
+export const hasKanji = (item: Vocabulary) => /\p{Script=Han}/u.test(item.kanji);
+export const requiredDimensions = (type: ContentKind, item?: Vocabulary | Grammar): QuizQuestion['dimension'][] => type === 'vocabulary'
+ ? (item && 'kanji' in item && !hasKanji(item) ? ['recognition','meaning','usage'] : ['recognition','meaning','kanji','usage'])
+ : ['understanding','usage','sentence'];
+export function masteryFromEvidence(progress: Pick<LearningProgress, 'itemType' | 'dimensions'>, item?: Vocabulary | Grammar) {
+ const required = requiredDimensions(progress.itemType, item);
+ const masteryScore = Math.round(required.reduce((sum, key) => sum + (progress.dimensions[key]?.score ?? 0), 0) / required.length);
+ const mastered = masteryScore >= 85 && required.every(key => (progress.dimensions[key]?.score ?? 0) >= 80 && (progress.dimensions[key]?.attempts ?? 0) >= 3);
+ return { masteryScore, mastered };
+}
 export function nextInterval(schedule: ReviewSchedule | undefined, rating: FlashcardRating) {
  const previous = schedule?.intervalDays ?? 0;
  // A second failed relearning attempt gets a one-day break; success restarts the ladder.
@@ -20,12 +29,11 @@ export function scheduleReview(progress: LearningProgress, previous: ReviewSched
  const schedule: ReviewSchedule = { id: progress.id, itemId: progress.itemId, itemType: progress.itemType, intervalDays, lastRating: rating, reviewCount: progress.reviewCount, lastReviewed: now.toISOString(), nextReview, createdAt: previous?.createdAt ?? progress.createdAt, updatedAt: now.toISOString() };
  return { intervalDays, nextReview, schedule };
 }
-export function advanceEvidence(progress: LearningProgress, previous: ReviewSchedule | undefined, rating: FlashcardRating, dimension: QuizQuestion['dimension'], now: Date, correct = rating >= 2) {
+export function advanceEvidence(progress: LearningProgress, previous: ReviewSchedule | undefined, rating: FlashcardRating, dimension: QuizQuestion['dimension'], now: Date, correct = rating >= 2, item?: Vocabulary | Grammar) {
  const before = progress.dimensions[dimension], attempts = (before?.attempts ?? 0) + 1;
  const score = Math.round(((before?.score ?? 0) * (attempts - 1) + [0,40,75,100][rating]) / attempts);
  const dimensions = { ...progress.dimensions, [dimension]: { attempts, correct: (before?.correct ?? 0) + Number(correct), score, lastTestedAt: now.toISOString(), source: before?.source === 'quiz' || before?.source === 'mixed' ? 'mixed' as const : 'self-rated' as const } };
- const required = requiredDimensions(progress.itemType), masteryScore = Math.round(required.reduce((n,key) => n + (dimensions[key]?.score ?? 0),0) / required.length);
- const mastered = masteryScore >= 85 && required.every(key => (dimensions[key]?.score ?? 0) >= 80 && (dimensions[key]?.attempts ?? 0) >= 3);
+ const { masteryScore, mastered } = masteryFromEvidence({ ...progress, dimensions }, item);
  const updated: LearningProgress = { ...progress, dimensions, masteryScore, status: rating === 0 ? 'WEAK' : rating === 1 ? 'LEARNING' : mastered ? 'MASTERED' : 'REVIEW', reviewCount: progress.reviewCount + 1, correctCount: progress.correctCount + Number(correct), wrongCount: progress.wrongCount + Number(!correct), lastReviewed: now.toISOString(), updatedAt: now.toISOString() };
  const next = scheduleReview(updated,previous,rating,now); updated.nextReview = next.nextReview;
  return { progress: updated, ...next };
@@ -46,6 +54,6 @@ export function reviewPriority(progress: LearningProgress, now: number) {
 }
 export function reviewFingerprint(p: LearningProgress) { return `${p.reviewCount}:${p.lastReviewed}:${p.nextReview}`; }
 export function weakestDimension(progress: LearningProgress, item: Vocabulary | Grammar) {
- return requiredDimensions(progress.itemType).filter(d => d !== 'kanji' || ('kanji' in item && /[一-龯]/u.test(item.kanji))).sort((a,b) => (progress.dimensions[a]?.score ?? -1) - (progress.dimensions[b]?.score ?? -1) || (progress.dimensions[a]?.attempts ?? 0) - (progress.dimensions[b]?.attempts ?? 0))[0];
+ return requiredDimensions(progress.itemType, item).sort((a,b) => (progress.dimensions[a]?.score ?? -1) - (progress.dimensions[b]?.score ?? -1) || (progress.dimensions[a]?.attempts ?? 0) - (progress.dimensions[b]?.attempts ?? 0))[0];
 }
 export function intervalLabel(days: number) { return days < 1 ? `${Math.round(days*1440)} menit` : `${days} hari`; }

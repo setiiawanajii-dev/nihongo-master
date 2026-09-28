@@ -19,9 +19,13 @@ export function calculateProgress(data: ProgressSnapshot, today = localDay()) {
     return { total: items.length, counts, learning: counts.LEARNING + counts.REVIEW, assessed, coverage: items.length ? sum / items.length : null };
   }
   const quizzes = [...data.quizResults].sort((a, b) => a.finishedAt.localeCompare(b.finishedAt));
-  const sessions = data.sessions.filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s.localDate) && Number.isFinite(dayNumber(s.localDate)) && s.localDate <= today);
+  const validDay = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(dayNumber(day)) && day <= today;
+  const sessions = data.sessions.map(session => ({ session, activity: Object.entries(session.dailyActivity ?? { [session.localDate]: session.activeDurationSeconds }).filter(([day, seconds]) => validDay(day) && Number.isFinite(seconds) && seconds >= 0) })).filter(s => s.activity.length);
   const days = new Map<string, { sessions: number; seconds: number }>();
-  for (const s of sessions) { const day = days.get(s.localDate) ?? { sessions: 0, seconds: 0 }; day.sessions++; day.seconds += Math.max(0, s.activeDurationSeconds); days.set(s.localDate, day); }
+  for (const { activity } of sessions) for (const [date, seconds] of activity) {
+    const day = days.get(date) ?? { sessions: 0, seconds: 0 };
+    day.sessions++; day.seconds += seconds; days.set(date, day);
+  }
   const ordered = [...days.keys()].map(dayNumber).sort((a, b) => a - b);
   let longest = 0, run = 0, previous = -Infinity;
   for (const day of ordered) { run = day === previous + 1 ? run + 1 : 1; longest = Math.max(longest, run); previous = day; }
@@ -43,6 +47,6 @@ export function calculateProgress(data: ProgressSnapshot, today = localDay()) {
   });
   return { vocabulary: summarize('vocabulary'), grammar: summarize('grammar'), levels, quizzes,
     quiz: { total: quizzes.length, score: mean(quizzes.map(q => q.score)), accuracy: mean(quizzes.map(q => q.accuracy)) },
-    study: { total: sessions.length, seconds: sessions.reduce((n, s) => n + Math.max(0, s.activeDurationSeconds), 0), current, longest, today: days.get(today) ?? { sessions: 0, seconds: 0 }, activity } };
+    study: { total: sessions.length, seconds: sessions.reduce((n, s) => n + s.activity.reduce((sum, [, seconds]) => sum + seconds, 0), 0), current, longest, today: days.get(today) ?? { sessions: 0, seconds: 0 }, activity } };
 }
 export type ProgressAnalytics = ReturnType<typeof calculateProgress>;

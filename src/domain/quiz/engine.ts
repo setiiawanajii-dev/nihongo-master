@@ -1,6 +1,6 @@
+import { hasKanji } from '../learning/spaced-repetition';
 import type { Category, ExampleSentence, Grammar, QuizAttempt, QuizConfig, QuizQuestion, QuizQuestionType, QuizResult, Vocabulary } from '../models';
-import { grammarForms } from './grammar-forms';
-import { seedGrammar } from '../../data/seed';
+import { usableGrammarTemplate } from './grammar-template';
 
 export const questionTypes: { value: QuizQuestionType; kind: 'vocabulary' | 'grammar'; label: string }[] = [
  { value: 'jp-to-id', kind: 'vocabulary', label: 'Japanese → Indonesian' },
@@ -56,7 +56,7 @@ export function buildQuestionPool(content: QuizContent, config: QuizConfig): Qui
   const example = examples[0]; const gloss = `${item.kanji}（${item.kana}）: ${item.meaning}.`;
   add(item, 'jp-to-id', 'meaning', `Apa arti 「${item.kanji}」?`, item.meaning, others.map(v => v.meaning), gloss);
   add(item, 'id-to-jp', 'meaning', `Pilih kata Jepang untuk: ${item.meaning}`, item.kanji, others.filter(v => v.meaning !== item.meaning).map(v => v.kanji), gloss);
-  if (/[一-龯]/u.test(item.kanji)) add(item, 'kanji-to-kana', 'kanji', `Bagaimana bacaan 「${item.kanji}」?`, item.kana, others.map(v => v.kana), gloss);
+  if (hasKanji(item)) add(item, 'kanji-to-kana', 'kanji', `Bagaimana bacaan 「${item.kanji}」?`, item.kana, others.map(v => v.kana), gloss);
   add(item, 'multiple-choice', 'recognition', `Pasangan bacaan dan arti mana yang cocok dengan 「${item.kanji}」?`, `${item.kana} — ${item.meaning}`, others.map(v => `${v.kana} — ${v.meaning}`), gloss);
   const blank = examples.find(e => e.japanese.includes(item.kanji));
   if (blank) add(item, 'fill-blank', 'usage', `Isi bagian kosong dengan bentuk kata Jepang pada materi (kanji atau kana).\n${blank.japanese.replace(item.kanji, '＿＿＿')}\n${blank.translation}`, item.kanji, null, `${blank.japanese}\n${blank.translation}\n${gloss}`, [item.kana]);
@@ -68,10 +68,11 @@ export function buildQuestionPool(content: QuizContent, config: QuizConfig): Qui
   const detail = `${item.pattern}: ${item.meaning}\n${item.formation}\n${item.explanation}`;
   add(item, 'grammar-meaning', 'understanding', `Apa makna pola 「${item.pattern}」?\n${item.explanation}`, item.meaning, others.map(g => g.meaning), detail);
   add(item, 'grammar-choice', 'understanding', `Pilih pola yang paling sesuai dengan penjelasan materi:\n${item.explanation}\nMakna: ${item.meaning}`, item.pattern, others.filter(g => g.meaning !== item.meaning && g.explanation !== item.explanation).map(g => g.pattern), detail);
-  const form = grammarForms[item.id]; const seed = seedGrammar.find(g => g.id === item.id);
-  if (form && example?.japanese.includes(form[0]) && item.pattern === seed?.pattern && item.formation === seed.formation) {
-   add(item, 'grammar-blank', 'sentence', `Lengkapi bagian kosong memakai bentuk pola 「${item.pattern}」 pada contoh materi. Pertahankan bentuk sopan/waktu sesuai terjemahan.\n${example.japanese.replace(form[0], '＿＿＿')}\n${example.translation}`, form[0], null, `${example.japanese}\n${example.translation}\n${detail}`);
-   add(item, 'grammar-sentence', 'sentence', `Pilih kalimat yang memakai pembentukan pola 「${item.pattern}」 sesuai materi dan makna ini:\n${example.translation}`, example.japanese, form.slice(1).map(wrong => example.japanese.replace(form[0], wrong)), `${example.japanese}\nPembentukan yang digunakan: ${form[0]}.\n${detail}`);
+  const template = usableGrammarTemplate(item.quizTemplate);
+  if (template) {
+   const explanation = `${template.sentence}\n${template.translation}\n${template.explanation}\n${detail}`;
+   add(item, 'grammar-blank', 'sentence', `Lengkapi bagian kosong memakai bentuk pola 「${item.pattern}」.\n${template.sentence.replace(template.blankAnswer, '＿＿＿')}\n${template.translation}`, template.blankAnswer, null, explanation);
+   if (template.wrongSentences.length === 3) add(item, 'grammar-sentence', 'sentence', `Pilih kalimat yang benar sesuai pola 「${item.pattern}」 dan makna ini:\n${template.translation}`, template.sentence, template.wrongSentences, explanation);
   }
   if (example?.translation.trim()) add(item, 'grammar-situation', 'usage', `Kamu ingin menyampaikan: “${example.translation}”\nGunakan nuansa berikut: ${item.explanation}\nPola mana yang sesuai?`, item.pattern, others.filter(g => g.meaning !== item.meaning && g.explanation !== item.explanation).map(g => g.pattern), `${example.japanese}\n${example.translation}\n${detail}`);
   const other = others.find(g => item.comparisonIds.includes(g.id) && g.meaning !== item.meaning) ?? others.find(g => g.meaning !== item.meaning);

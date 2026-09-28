@@ -1,7 +1,8 @@
+import { activityDay } from '../../domain/learning/study-activity';
 import type { LearningProgress, QuizConfig, QuizResult } from '../../domain/models';
 import { progressKey } from '../../domain/models';
 import { buildQuestionPool, calculateResult, chooseQuestions } from '../../domain/quiz/engine';
-import { scheduleReview } from '../../domain/learning/spaced-repetition';
+import { scheduleReview, masteryFromEvidence } from '../../domain/learning/spaced-repetition';
 import { newProgress } from '../../services/progress';
 import { stores, transact, type Transaction } from './indexeddb';
 import { validate } from './validation';
@@ -11,7 +12,8 @@ async function applyProgress(tx: Transaction, result: QuizResult) {
  for (const row of result.answers) {
   const q = row.questionSnapshot;
   // Content may have been deleted while the quiz was open; history remains a snapshot.
-  if (!await tx.get(q.itemType, q.itemId)) continue;
+  const item = await tx.get(q.itemType, q.itemId);
+  if (!item) continue;
   const id = progressKey(q.itemType, q.itemId), stamp = result.finishedAt;
   const current = await tx.get('progress', id) ?? { ...newProgress(q.itemType, q.itemId), id, createdAt: stamp, updatedAt: stamp };
   ratings.set(id, !row.isCorrect || ratings.get(id) === 0 ? 0 : 2);
@@ -19,9 +21,7 @@ async function applyProgress(tx: Transaction, result: QuizResult) {
   const attempts = (previous?.attempts ?? 0) + 1;
   const score = Math.round(((previous?.score ?? 0) * (attempts - 1) + (row.isCorrect ? 100 : 0)) / attempts);
   const dimensions = { ...current.dimensions, [q.dimension]: { attempts, correct: (previous?.correct ?? 0) + Number(row.isCorrect), score, lastTestedAt: stamp, source: previous && previous.source !== 'quiz' ? 'mixed' as const : 'quiz' as const } };
-  const keys = q.itemType === 'vocabulary' ? ['recognition', 'meaning', 'kanji', 'usage'] as const : ['understanding', 'usage', 'sentence'] as const;
-  const masteryScore = Math.round(keys.reduce((sum,key) => sum + (dimensions[key]?.score ?? 0),0) / keys.length);
-  const mastered = masteryScore >= 85 && keys.every(key => (dimensions[key]?.score ?? 0) >= 80 && (dimensions[key]?.attempts ?? 0) >= 3);
+  const { masteryScore, mastered } = masteryFromEvidence({ ...current, dimensions }, item);
   const progress: LearningProgress = { ...current, dimensions, masteryScore, status: !row.isCorrect ? 'WEAK' : mastered ? 'MASTERED' : 'REVIEW', reviewCount: current.reviewCount + 1, correctCount: current.correctCount + Number(row.isCorrect), wrongCount: current.wrongCount + Number(!row.isCorrect), lastReviewed: stamp, updatedAt: stamp };
   await validate('progress', progress, tx); await tx.put('progress', progress);
  }
@@ -72,7 +72,13 @@ export const quizCommands = {
     const result = calculateResult(attempt, stamp);
     await tx.add('quizResults', result); await applyProgress(tx, result);
     const now = new Date();
-    await tx.add('sessions', { id, type: 'quiz', startedAt: attempt.startedAt, endedAt: stamp, activeDurationSeconds: result.activeDurationSeconds, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, localDate: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`, itemIds: [...new Set(attempt.questions.map(q => q.itemId))], createdAt: stamp, updatedAt: stamp });
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const dailyActivity: Record<string, number> = {};
+    attempt.answers.forEach((answer, index) => {
+     const day = activityDay(answer.answeredAt, timezone);
+     dailyActivity[day] = (dailyActivity[day] ?? 0) + attempt.questionSeconds[index];
+    });
+    await tx.add('sessions', { id, type: 'quiz', startedAt: attempt.startedAt, endedAt: stamp, activeDurationSeconds: result.activeDurationSeconds, timezone, dailyActivity, localDate: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`, itemIds: [...new Set(attempt.questions.map(q => q.itemId))], createdAt: stamp, updatedAt: stamp });
    }
    await tx.put('quizAttempts', attempt); return attempt;
   });

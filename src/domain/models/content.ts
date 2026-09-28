@@ -24,7 +24,16 @@ export interface Vocabulary extends ContentBase {
   romaji: string;
   partOfSpeech: string;
 }
+export interface GrammarQuizTemplate {
+  sentence: string;
+  translation: string;
+  blankAnswer: string;
+  wrongSentences: string[];
+  explanation: string;
+  validated: true;
+}
 export interface Grammar extends ContentBase {
+  quizTemplate?: GrammarQuizTemplate | null;
   pattern: string;
   formation: string;
   explanation: string;

@@ -1,3 +1,4 @@
+import { appendActivity } from '../../domain/learning/study-activity';
 import { progressKey, type LearningProgress, type GrammarReviewInput } from '../../domain/models';
 import { advanceGrammar } from '../../domain/learning/grammar';
 import { newProgress } from '../../services/progress';
@@ -31,7 +32,7 @@ export async function recordGrammarReview(input: GrammarReviewInput): Promise<Le
     const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     await tx.put('sessions', { id: input.sessionId, type: 'review', startedAt: session?.startedAt ?? new Date(now.getTime() - duration * 1000).toISOString(), endedAt: stamp,
       activeDurationSeconds: (session?.activeDurationSeconds ?? 0) + duration, timezone: session?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-      localDate: session?.localDate ?? localDate, itemIds: [...new Set([...(session?.itemIds ?? []), input.itemId])], createdAt: session?.createdAt ?? stamp, updatedAt: stamp });
+      dailyActivity: appendActivity(session, duration, now), localDate: session?.localDate ?? localDate, itemIds: [...new Set([...(session?.itemIds ?? []), input.itemId])], createdAt: session?.createdAt ?? stamp, updatedAt: stamp });
     return next.progress;
   });
 }

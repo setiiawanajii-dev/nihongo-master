@@ -1,7 +1,10 @@
+import { recoverActivity } from '../../domain/learning/study-activity';
+import { hasKanji, masteryFromEvidence } from '../../domain/learning/spaced-repetition';
+import type { LearningProgress, Vocabulary } from '../../domain/models';
 import type { StoreName, Tables } from '../../repositories/contracts';
 
 export const DATABASE_NAME = 'nihongo-master';
-export const DATABASE_VERSION = 7;
+export const DATABASE_VERSION = 9;
 export const stores: StoreName[] = ['vocabulary', 'grammar', 'examples', 'categories', 'questions', 'progress', 'favorites', 'schedules', 'quizResults', 'quizAttempts', 'reviewRuns', 'sessions', 'reviewEvents', 'meta'];
 let connection: Promise<IDBDatabase> | undefined;
 export function openDatabase(): Promise<IDBDatabase> {
@@ -53,6 +56,53 @@ export function openDatabase(): Promise<IDBDatabase> {
             row.continue();
           };
         }
+      }
+      if (event.oldVersion < 8) {
+        // Recalculate only affected evidence; never invent reviews or change schedules.
+        const tx = request.transaction!;
+        const cursor = tx.objectStore('progress').openCursor();
+        cursor.onsuccess = () => {
+          const row = cursor.result;
+          if (!row) return;
+          const progress = row.value as LearningProgress;
+          if (progress.itemType === 'vocabulary' && Object.keys(progress.dimensions).length) {
+            const content = tx.objectStore('vocabulary').get(progress.itemId);
+            content.onsuccess = () => {
+              const item = content.result as Vocabulary | undefined;
+              if (item && !hasKanji(item)) {
+                const { masteryScore, mastered } = masteryFromEvidence(progress, item);
+                const status = progress.status === 'REVIEW' && mastered ? 'MASTERED' : progress.status;
+                row.update({ ...progress, masteryScore, status });
+              }
+              row.continue();
+            };
+          } else row.continue();
+        };
+      }
+      if (event.oldVersion < 9) {
+        const tx = request.transaction!;
+        const events = tx.objectStore('reviewEvents').getAll();
+        events.onsuccess = () => {
+          const grouped = new Map<string, { stamp: string; seconds: number }[]>();
+          for (const e of events.result) grouped.set(e.sessionId, [...(grouped.get(e.sessionId) ?? []), { stamp: e.createdAt, seconds: e.activeDurationSeconds }]);
+          const cursor = tx.objectStore('sessions').openCursor();
+          cursor.onsuccess = () => {
+            const row = cursor.result;
+            if (!row) return;
+            const session = row.value;
+            if (session.dailyActivity) { row.continue(); return; }
+            if (session.type === 'quiz') {
+              const attempt = tx.objectStore('quizAttempts').get(session.id);
+              attempt.onsuccess = () => {
+                const a = attempt.result;
+                const evidence = a?.answers.map((answer: { answeredAt: string }, i: number) => ({ stamp: answer.answeredAt, seconds: a.questionSeconds[i] })) ?? [];
+                row.update({ ...session, dailyActivity: recoverActivity(session, evidence) }); row.continue();
+              };
+            } else {
+              row.update({ ...session, dailyActivity: recoverActivity(session, grouped.get(session.id) ?? []) }); row.continue();
+            }
+          };
+        };
       }
     };
     request.onerror = () => reject(request.error ?? new Error('Tidak dapat membuka database.'));

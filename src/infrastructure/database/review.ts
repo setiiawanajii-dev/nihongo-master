@@ -1,3 +1,4 @@
+import { appendActivity } from '../../domain/learning/study-activity';
 import type { FlashcardRating, GrammarDimension, ReviewFilter, ReviewOutcome, ReviewRun } from '../../domain/models';
 import { progressKey } from '../../domain/models';
 import { advanceEvidence, effectiveReviewDate, reviewFingerprint, weakestDimension } from '../../domain/learning/spaced-repetition';
@@ -48,14 +49,14 @@ export const reviewCommands = {
    if(!item||!current) return finishEntry(tx,run,{...base,rating:null,nextReview:null,masteryScore:null,skippedReason:'Materi atau progres sudah dihapus.'});
    if(reviewFingerprint(current)!==entry.fingerprint || Date.parse(effectiveReviewDate(current)??'')>now.getTime()) return finishEntry(tx,run,{...base,rating:null,nextReview:current.nextReview,masteryScore:current.masteryScore,skippedReason:'Progres atau jadwal berubah sejak sesi dimulai.'});
    // In this review UI, Hard explicitly means a correct recall with difficulty.
-   const next=advanceEvidence(current,await tx.get('schedules',key),rating,entry.dimension,now,rating>0);
+   const next=advanceEvidence(current,await tx.get('schedules',key),rating,entry.dimension,now,rating>0,item);
    await validate('progress',next.progress,tx);await tx.put('progress',next.progress);await tx.put('schedules',next.schedule);
    const duration=Math.min(300,Math.round(seconds));
    const event={id:`review:${run.id}:${index}`,itemId:entry.itemId,rating,sessionId:run.id,nextReview:next.nextReview,activeDurationSeconds:duration,response:response.trim(),createdAt:stamp,updatedAt:stamp};
    if(entry.itemType==='grammar') await tx.add('reviewEvents',{...event,itemType:'grammar',dimension:entry.dimension as GrammarDimension});
    else await tx.add('reviewEvents',{...event,itemType:'vocabulary',dimension:entry.dimension});
    const session=await tx.get('sessions',run.id);
-   await tx.put('sessions',{id:run.id,type:'review',startedAt:run.createdAt,endedAt:null,activeDurationSeconds:(session?.activeDurationSeconds??0)+duration,timezone:session?.timezone??Intl.DateTimeFormat().resolvedOptions().timeZone,localDate:session?.localDate??`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`,itemIds:[...new Set([...(session?.itemIds??[]),entry.itemId])],createdAt:session?.createdAt??run.createdAt,updatedAt:stamp});
+   await tx.put('sessions',{id:run.id,type:'review',startedAt:run.createdAt,endedAt:null,activeDurationSeconds:(session?.activeDurationSeconds??0)+duration,timezone:session?.timezone??Intl.DateTimeFormat().resolvedOptions().timeZone,dailyActivity:appendActivity(session,duration,now),localDate:session?.localDate??`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`,itemIds:[...new Set([...(session?.itemIds??[]),entry.itemId])],createdAt:session?.createdAt??run.createdAt,updatedAt:stamp});
    return finishEntry(tx,run,{...base,rating,nextReview:next.nextReview,masteryScore:next.progress.masteryScore});
   });
  },

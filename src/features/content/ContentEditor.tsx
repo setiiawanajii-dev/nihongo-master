@@ -1,3 +1,4 @@
+import { validateGrammarTemplate } from '../../domain/quiz/grammar-template';
 import { type FormEvent } from 'react';
 import type { ContentKind, Grammar, JLPTLevel, Vocabulary } from '../../domain/models';
 import { useData } from '../../app/data/DataProvider';
@@ -24,7 +25,9 @@ export function ContentEditor({ kind, item, onClose }: { kind: ContentKind; item
         const data = { ...common, kanji: string('kanji'), kana: string('kana'), romaji: string('romaji'), partOfSpeech: string('partOfSpeech') };
         if (item) await database.vocabulary.update(item.id, data); else await database.vocabulary.create(data);
       } else {
-        const data = { ...common, pattern: string('pattern'), formation: string('formation'), explanation: string('explanation'), commonMistakes: string('commonMistakes'), comparisonIds: form.getAll('comparisonIds').map(String) };
+        const templateFields = ['quizSentence','quizTranslation','quizAnswer','quizExplanation','quizWrong1','quizWrong2','quizWrong3'];
+        const quizTemplate = templateFields.some(key => string(key)) ? validateGrammarTemplate({ sentence: string('quizSentence'), translation: string('quizTranslation'), blankAnswer: string('quizAnswer'), explanation: string('quizExplanation'), wrongSentences: [1,2,3].map(n => string('quizWrong'+n)).filter(Boolean), validated: form.get('quizValidated') === 'on' }) : null;
+        const data = { ...common, quizTemplate, pattern: string('pattern'), formation: string('formation'), explanation: string('explanation'), commonMistakes: string('commonMistakes'), comparisonIds: form.getAll('comparisonIds').map(String) };
         if (item) await database.grammar.update(item.id, data); else await database.grammar.create(data);
       }
     }), onClose);
@@ -34,6 +37,14 @@ export function ContentEditor({ kind, item, onClose }: { kind: ContentKind; item
     <label>Arti Indonesia<input name="meaning" required defaultValue={item?.meaning} /></label><div className="form-columns"><label>JLPT<select name="jlptLevel" defaultValue={item?.jlptLevel ?? 'N3'}>{['N5', 'N4', 'N3', 'N2'].map(level => <option key={level}>{level}</option>)}</select></label><label>Kesulitan<select name="difficulty" defaultValue={item?.difficulty ?? 3}>{[1, 2, 3, 4, 5].map(level => <option key={level} value={level}>{level}</option>)}</select></label></div>
     <fieldset className="category-checkboxes"><legend>Kategori</legend>{categories.map(category => <label key={category.id}><input type="checkbox" name="categoryIds" value={category.id} defaultChecked={item?.categoryIds.includes(category.id)} />{category.name}</label>)}</fieldset>
     {kind === 'grammar' && <fieldset className="category-checkboxes"><legend>Grammar terkait</legend>{grammar.filter(row => row.id !== item?.id).map(row => <label key={row.id}><input name="comparisonIds" type="checkbox" value={row.id} defaultChecked={g?.comparisonIds.includes(row.id)} />{row.pattern}</label>)}</fieldset>}
+    {kind === 'grammar' && <details open={!!g?.quizTemplate}><summary>Soal grammar tervalidasi (opsional)</summary><p className="small-note">Isi untuk mengaktifkan Fill in blank. Tambahkan tiga kalimat pengecoh untuk Correct sentence. Periksa sendiri kebenaran kalimat dan jawabannya; aplikasi tidak membuatnya otomatis. Kosongkan semua kolom di bawah untuk menghapus template.</p>
+      <label>Kalimat benar<textarea name="quizSentence" defaultValue={g?.quizTemplate?.sentence} /></label>
+      <label>Terjemahan kalimat quiz<textarea name="quizTranslation" defaultValue={g?.quizTemplate?.translation} /></label>
+      <label>Jawaban bagian kosong<input name="quizAnswer" defaultValue={g?.quizTemplate?.blankAnswer} /></label><p className="small-note">Salin bagian kalimat yang ingin dikosongkan. Bagian ini harus muncul tepat satu kali.</p>
+      <label>Pembahasan jawaban<textarea name="quizExplanation" defaultValue={g?.quizTemplate?.explanation} /></label>
+      {[1,2,3].map(n => <label key={n}>Kalimat pengecoh {n}<textarea name={'quizWrong'+n} defaultValue={g?.quizTemplate?.wrongSentences[n-1]} /></label>)}
+      <label><input type="checkbox" name="quizValidated" />Saya sudah memeriksa kalimat benar, terjemahan, jawaban, pembahasan, dan pengecoh. Pengecoh tidak benar untuk pola dan makna soal ini.</label>
+    </details>}
     <label>Catatan materi<textarea aria-label="Catatan materi" name="notes" defaultValue={item?.notes} /></label>
     </fieldset><ErrorMessage message={error} /><div className="form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={onClose}>Batal</Button><Button type="submit" disabled={busy}>{busy ? 'Menyimpan…' : 'Simpan materi'}</Button></div></form></Modal>;
 }

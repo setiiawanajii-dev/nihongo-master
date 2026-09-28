@@ -1,3 +1,4 @@
+import { appendActivity } from '../../domain/learning/study-activity';
 import { progressKey, type LearningProgress, type VocabularyReviewInput } from '../../domain/models';
 import { advanceVocabulary } from '../../domain/learning/vocabulary';
 import { newProgress } from '../../services/progress';
@@ -8,7 +9,8 @@ export async function recordVocabularyReview(input: VocabularyReviewInput): Prom
   if (!input || ![0, 1, 2, 3].includes(input.rating) || !input.itemId || !input.eventId?.trim() || !input.sessionId?.trim() || !Number.isFinite(input.activeDurationSeconds) || input.activeDurationSeconds < 0) throw new Error('Jawaban flashcard tidak valid.');
   return transact(stores, 'readwrite', async tx => {
     const key = progressKey('vocabulary', input.itemId);
-    if (!await tx.get('vocabulary', input.itemId)) throw new Error('Vocabulary sudah dihapus. Lewati kartu ini.');
+    const item = await tx.get('vocabulary', input.itemId);
+    if (!item) throw new Error('Vocabulary sudah dihapus. Lewati kartu ini.');
     const previousEvent = await tx.get('reviewEvents', input.eventId);
     if (previousEvent) {
       if (previousEvent.itemType !== 'vocabulary' || previousEvent.itemId !== input.itemId || previousEvent.rating !== input.rating || previousEvent.sessionId !== input.sessionId) throw new Error('Identitas jawaban telah dipakai. Muat ulang sesi.');
@@ -18,7 +20,7 @@ export async function recordVocabularyReview(input: VocabularyReviewInput): Prom
     }
     const now = new Date(); const stamp = now.toISOString();
     const previous = await tx.get('progress', key) ?? { ...newProgress('vocabulary', input.itemId), id: key, createdAt: stamp, updatedAt: stamp };
-    const next = advanceVocabulary(previous, await tx.get('schedules', key), input.rating, now);
+    const next = advanceVocabulary(previous, await tx.get('schedules', key), input.rating, now, item);
     await validate('progress', next.progress, tx);
     await tx.put('progress', next.progress);
     await tx.put('schedules', { id: key, itemId: input.itemId, itemType: 'vocabulary', intervalDays: next.intervalDays, lastRating: input.rating,
@@ -31,7 +33,7 @@ export async function recordVocabularyReview(input: VocabularyReviewInput): Prom
     const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     await tx.put('sessions', { id: input.sessionId, type: 'flashcards', startedAt: session?.startedAt ?? new Date(now.getTime() - duration * 1000).toISOString(), endedAt: stamp,
       activeDurationSeconds: (session?.activeDurationSeconds ?? 0) + duration, timezone: session?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-      localDate: session?.localDate ?? localDate, itemIds: [...new Set([...(session?.itemIds ?? []), input.itemId])], createdAt: session?.createdAt ?? stamp, updatedAt: stamp });
+      dailyActivity: appendActivity(session, duration, now), localDate: session?.localDate ?? localDate, itemIds: [...new Set([...(session?.itemIds ?? []), input.itemId])], createdAt: session?.createdAt ?? stamp, updatedAt: stamp });
     return next.progress;
   });
 }

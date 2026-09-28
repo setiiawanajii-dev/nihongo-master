@@ -43,6 +43,7 @@ export interface StudySession extends Entity {
   activeDurationSeconds: number;
   timezone: string;
   localDate: string;
+  dailyActivity?: Record<string, number>;
   itemIds: string[];
 }
 export type FavoriteTarget = { type: ContentKind; itemId: string };

@@ -1,3 +1,4 @@
+import { validateGrammarTemplate } from '../../domain/quiz/grammar-template';
 import type { Entity, Favorite, Grammar, LearningProgress } from '../../domain/models';
 import { favoriteKey, progressKey } from '../../domain/models';
 import type { StoreName, Tables } from '../../repositories/contracts';
@@ -34,6 +35,7 @@ export async function validate<K extends Exclude<StoreName, 'meta'>>(store: K, v
       assert(!(await tx.list('vocabulary')).some(other => other.id !== v.id && !other.importDuplicate && !v.importDuplicate && key(other) === key(v)), 'Vocabulary ini sudah ada. Edit entri yang ada agar progres tidak terpisah.');
     } else {
       const g = item as Grammar;
+      if (g.quizTemplate != null) validateGrammarTemplate(g.quizTemplate);
       for (const key of ['pattern', 'formation', 'explanation'] as const) text(g[key], key, key !== 'explanation' || !g.importedFromFile);
       text(g.commonMistakes, 'Kesalahan umum', false);
       assert(Array.isArray(g.comparisonIds), 'Daftar perbandingan tidak valid.');
