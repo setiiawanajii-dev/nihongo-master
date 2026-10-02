@@ -1,0 +1,11 @@
+[
+  {
+    "type": "grammar",
+    "grammar": "〜ながら",
+    "meaning": "sambil",
+    "pattern": "Vます tanpa ます + ながら",
+    "example": "音楽を聞きながら勉強します。",
+    "translation": "Saya belajar sambil mendengarkan musik.",
+    "level": "N3"
+  }
+]
