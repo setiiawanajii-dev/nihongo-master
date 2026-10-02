@@ -2,7 +2,7 @@ import { LearningSteps } from '../onboarding/GettingStarted';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '../../app/data/DataProvider';
-import { calculateDashboard } from '../../domain/analytics/dashboard';
+import { calculateDashboard, dashboardQuizAvailability } from '../../domain/analytics/dashboard';
 import { percent } from '../../domain/analytics/progress';
 import { Badge, Button, Card, SectionHeading } from '../../components/ui';
 import { ErrorMessage, useOperation } from '../../components/DataState';
@@ -11,7 +11,10 @@ import { database } from '../../services/database';
 export function SmartDashboard() {
  const data=useData(), navigate=useNavigate(); const [now,setNow]=useState(()=>new Date());const {busy,error,run}=useOperation();
  useEffect(()=>{const update=()=>setNow(new Date());const timer=setInterval(update,10_000);window.addEventListener('focus',update);return()=>{clearInterval(timer);window.removeEventListener('focus',update);};},[]);
- const smart=useMemo(()=>calculateDashboard(data,now),[data,now]);
+ const { vocabulary, grammar, examples, categories } = data;
+ // Review deadlines still update with the clock; quiz availability changes only with content.
+ const availability = useMemo(() => dashboardQuizAvailability({ vocabulary, grammar, examples, categories }), [vocabulary, grammar, examples, categories]);
+ const smart=useMemo(()=>calculateDashboard(data,now,availability),[data,now,availability]);
  const recommendation=smart.recommendation, isDue=recommendation && smart.due.some(row=>row.progress.id===recommendation.progress.id);
  const url=(kind:string,id:string)=>`/${kind}/${encodeURIComponent(id)}`;
  return <section className="smart-dashboard" aria-label="Rekomendasi belajar">

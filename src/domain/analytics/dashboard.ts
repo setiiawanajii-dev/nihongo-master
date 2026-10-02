@@ -2,11 +2,17 @@ import type { ContentKind, QuizConfig, Vocabulary, Grammar } from '../models';
 import type { ProgressSnapshot } from './progress';
 import type { QuizContent } from '../quiz/engine';
 import { localDay } from './progress';
-import { buildQuestionPool, questionTypes } from '../quiz/engine';
+import { countQuestionAvailability, questionTypes } from '../quiz/engine';
 import { selectReviewQueue } from '../learning/review-queue';
 import { effectiveReviewDate, reviewPriority } from '../learning/spaced-repetition';
 
-export function calculateDashboard(data: ProgressSnapshot & QuizContent, now = new Date()) {
+export function dashboardQuizAvailability(data: QuizContent) {
+ const levels = [...new Set([...data.vocabulary,...data.grammar].map(i=>i.jlptLevel))];
+ const config: QuizConfig = {mode:'mixed',count:10,levels,categoryIds:[],types:questionTypes.map(q=>q.value)};
+ return {config, counts: levels.length ? countQuestionAvailability(data, config) : {vocabulary:0,grammar:0}};
+}
+
+export function calculateDashboard(data: ProgressSnapshot & QuizContent, now = new Date(), availability = dashboardQuizAvailability(data)) {
  const today = localDay(now), time = now.getTime();
  const live = new Map<string, Vocabulary | Grammar>([...data.vocabulary.map(item => [`vocabulary:${item.id}`, item] as const), ...data.grammar.map(item => [`grammar:${item.id}`, item] as const)]);
  const records = data.progress.filter(p => live.has(`${p.itemType}:${p.itemId}`));
@@ -21,11 +27,9 @@ export function calculateDashboard(data: ProgressSnapshot & QuizContent, now = n
   // A starter batch grows with the available bank, rather than a fixed daily target.
   return { available:available.length, items:available.slice(0,Math.ceil(Math.sqrt(available.length))) };
  };
- const levels = [...new Set([...data.vocabulary,...data.grammar].map(i=>i.jlptLevel))];
  let quiz: { config:QuizConfig; available:number } | null = null;
- if (levels.length) {
-  const base:QuizConfig={mode:'mixed',count:10,levels,categoryIds:[],types:questionTypes.map(q=>q.value)};
-  const pool=buildQuestionPool(data,base), v=pool.filter(q=>q.itemType==='vocabulary').length,g=pool.length-v;
+ if (availability.config.levels.length) {
+  const base = availability.config, { vocabulary: v, grammar: g } = availability.counts;
   const mode:QuizConfig['mode']=Math.min(v,g)*2>=10?'mixed':v>=g?'vocabulary':'grammar';
   const available=mode==='mixed'?Math.min(v,g)*2:Math.max(v,g);
   const history=data.quizResults.filter(q=>Date.parse(q.finishedAt)<=time && q.answers.length>0);
