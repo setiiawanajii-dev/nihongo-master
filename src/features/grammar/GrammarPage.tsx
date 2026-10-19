@@ -16,7 +16,10 @@ import { GrammarProgress } from './GrammarProgress';
 export function GrammarPage({ reviewOnly = false }: { reviewOnly?: boolean }) {
   const [createdId, setCreatedId] = useState<string | null>(null);
   const data = useData(); const [params, setParams] = useSearchParams();
-  const categories = useMemo(() => categoriesForContent(data.categories, data.grammar), [data.categories, data.grammar]);
+  const level = params.get('level');
+  const categories = useMemo(() => categoriesForContent(data.categories,
+    !level || level === 'all' ? data.grammar : data.grammar.filter(item => item.jlptLevel === level)),
+    [data.categories, data.grammar, level]);
   useEffect(() => {
     const category = params.get('category');
     if (data.loading || data.error || !category || categories.some(c => c.id === category)) return;
