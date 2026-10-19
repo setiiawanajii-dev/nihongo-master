@@ -1,5 +1,6 @@
+import { categoriesForContent } from '../categories/selection';
 import { SavedMaterial } from '../onboarding/GettingStarted';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { BookOpen, Heart, Plus, Search } from 'lucide-react';
 import { useData } from '../../app/data/DataProvider';
@@ -15,6 +16,12 @@ import { GrammarProgress } from './GrammarProgress';
 export function GrammarPage({ reviewOnly = false }: { reviewOnly?: boolean }) {
   const [createdId, setCreatedId] = useState<string | null>(null);
   const data = useData(); const [params, setParams] = useSearchParams();
+  const categories = useMemo(() => categoriesForContent(data.categories, data.grammar), [data.categories, data.grammar]);
+  useEffect(() => {
+    const category = params.get('category');
+    if (data.loading || data.error || !category || categories.some(c => c.id === category)) return;
+    setParams(current => { const next = new URLSearchParams(current); next.delete('category'); next.delete('page'); return next; }, { replace: true });
+  }, [categories, data.loading, data.error, params, setParams]);
   const [editing, setEditing] = useState<Grammar | 'new' | null>(null);
   const { busy, error, run } = useOperation();
   const [now, setNow] = useState(Date.now());
@@ -32,7 +39,7 @@ export function GrammarPage({ reviewOnly = false }: { reviewOnly?: boolean }) {
   const listLocation = `${reviewOnly ? "/review" : "/grammar"}${params.toString() ? `?${params}` : ''}`;
   useEffect(() => { if (params.get('add') === '1') { setEditing('new'); setParams(current => { const next = new URLSearchParams(current); next.delete('add'); return next; }, { replace: true }); } }, [params, setParams]);
   return <><PageHeading eyebrow={reviewOnly ? '復習 / REVIEW GRAMMAR' : '文法 / BUNPOU'} title={reviewOnly ? 'Ulangi hari ini, ingat lebih lama.' : 'Pahami pola, temukan makna.'} description={reviewOnly ? 'Grammar yang jadwal review-nya sudah tiba.' : `${data.grammar.length} grammar tersimpan di ruang belajarmu.`}><div className="entry-actions"><Button disabled={data.loading || !!data.error} onClick={() => setEditing('new')}><Plus size={16} />Tambah grammar</Button></div></PageHeading><DataState>{createdId && <SavedMaterial kind="grammar" id={createdId} onDismiss={() => setCreatedId(null)} />}<p className="info-banner">Impor materi dari JSON/CSV atau tambahkan sendiri melalui tombol Tambah. Progres grammar berasal dari latihan mandiri dan quiz dan disimpan di perangkat.</p><ErrorMessage message={error} />
-    <div className="content-toolbar"><label className="search-field"><Search size={18} /><input aria-label="Cari grammar" placeholder="Cari pola, pembentukan, arti, atau kategori…" value={params.get('q') ?? ''} onChange={event => setFilter('q', event.target.value)} /></label><label className="filter-field">Level<select aria-label="Filter level JLPT" value={params.get('level') ?? 'all'} onChange={e => setFilter('level', e.target.value)}><option value="all">Semua level</option>{['N5', 'N4', 'N3', 'N2'].map(level => <option key={level}>{level}</option>)}</select></label><label className="filter-field">Kategori<select aria-label="Filter kategori" value={params.get('category') ?? 'all'} onChange={e => setFilter('category', e.target.value)}><option value="all">Semua kategori</option>{data.categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label></div>
+    <div className="content-toolbar"><label className="search-field"><Search size={18} /><input aria-label="Cari grammar" placeholder="Cari pola, pembentukan, arti, atau kategori…" value={params.get('q') ?? ''} onChange={event => setFilter('q', event.target.value)} /></label><label className="filter-field">Level<select aria-label="Filter level JLPT" value={params.get('level') ?? 'all'} onChange={e => setFilter('level', e.target.value)}><option value="all">Semua level</option>{['N5', 'N4', 'N3', 'N2'].map(level => <option key={level}>{level}</option>)}</select></label><label className="filter-field">Kategori<select aria-label="Filter kategori" value={params.get('category') ?? 'all'} onChange={e => setFilter('category', e.target.value)}><option value="all">Semua kategori</option>{categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label></div>
     <div className="vocabulary-controls"><div className="filter-pills" role="group" aria-label="Status grammar">{(reviewOnly ? [['review', 'Review']] : [['all', 'Semua'], ['favorite', 'Favorit'], ['NEW', 'NEW'], ['LEARNING', 'LEARNING'], ['REVIEW', 'REVIEW'], ['WEAK', 'WEAK'], ['MASTERED', 'MASTERED'], ['review', 'Jatuh tempo']]).map(([value, label]) => <button key={value} aria-pressed={(filters.get('status') ?? 'all') === value} onClick={() => setFilter('status', value)}>{label}</button>)}</div><label className="filter-field">Urutkan<select aria-label="Urutkan grammar" value={filters.get('sort') ?? 'newest'} onChange={e => setFilter('sort', e.target.value)}><option value="newest">Terbaru</option><option value="pattern">Pola (あ→ん)</option><option value="mastery-asc">Penguasaan terendah</option><option value="mastery-desc">Penguasaan tertinggi</option><option value="review">Review terdekat</option></select></label></div>
     <p className="result-count muted" aria-live="polite">{filtered.length} grammar · Halaman {page} / {pageCount}</p>{filtered.length === 0 ? <EmptyState icon={Search} title="Belum ada hasil yang cocok" description={reviewOnly ? 'Belum ada review yang jatuh tempo. Kamu tetap bisa berlatih dari daftar grammar.' : 'Ganti filter atau kata pencarian. Mastered hanya muncul setelah ada bukti kemampuan yang memadai.'} to="/grammar" action="Lihat semua grammar" /> : <div className="content-grid">{pageItems.map(item => {
       const favorite = data.favorites.find(f => f.target.type === 'grammar' && f.target.itemId === item.id);

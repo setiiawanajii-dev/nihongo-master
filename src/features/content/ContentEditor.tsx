@@ -1,3 +1,4 @@
+import { categoriesForContent } from '../categories/selection';
 import { validateGrammarTemplate } from '../../domain/quiz/grammar-template';
 import { type FormEvent } from 'react';
 import type { ContentKind, Grammar, JLPTLevel, Vocabulary } from '../../domain/models';
@@ -8,7 +9,9 @@ import { Button } from '../../components/ui';
 import { ErrorMessage, useOperation } from '../../components/DataState';
 
 export function ContentEditor({ kind, item, onClose, onCreated }: { kind: ContentKind; item?: Vocabulary | Grammar; onClose: () => void; onCreated?: (id: string) => void }) {
-  const { categories, grammar, mutate } = useData();
+  const { categories: allCategories, vocabulary, grammar, mutate } = useData();
+  // Unused categories remain selectable so newly created categories can be assigned.
+  const categories = categoriesForContent(allCategories, kind === 'vocabulary' ? vocabulary : grammar, kind === 'vocabulary' ? grammar : vocabulary, true);
   const { busy, error, run } = useOperation();
   const v = kind === 'vocabulary' ? item as Vocabulary | undefined : undefined;
   const g = kind === 'grammar' ? item as Grammar | undefined : undefined;
